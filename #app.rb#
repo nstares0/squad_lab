@@ -1,0 +1,68 @@
+require 'sinatra'
+require  'better_errors'
+require 'pry'
+require 'pg'
+
+configure :development do 
+  use BetterErrors::Middleware
+  BetterErrors.application_root = __dir__
+end
+
+set :conn, PG.connect(dbname: 'squad_lab')
+
+before do 
+  @conn = settings.conn
+
+end
+
+
+# REDIRECT MAIN PAGE
+
+get '/' do
+  redirect '/squads'
+end
+# SHOW SQUADS PAGE
+get '/squads' do
+squads = []
+ @conn.exec("SELECT * FROM squad") do |result|
+    result.each do |squad|
+      squads << squad
+    end
+  end
+    @squads = squads
+erb :squads
+end
+
+get '/squads/new' do
+erb :new_squad
+  end
+
+  post '/squads' do
+@conn.exec("INSERT INTO squad (name) VALUES ($1)",[params[:name]])
+redirect '/squads'
+  end
+
+
+
+  get '/squads/:id' do
+    id = 1
+    id = params[:id].to_i
+    squad =  @conn.exec("SELECT * FROM squad WHERE id=$1", [id])
+    @squad = squad[0]
+    erb :squad
+  end
+
+  get '/squads/:id/edit' do
+    id = params[:id].to_i
+    squad =  @conn.exec("SELECT * FROM squad WHERE id=$1", [id])
+    @squad = squad[0]
+    erb :edit_squad
+  end
+
+  put '/squads/:id' do
+    id = params[:id].to_i
+    @conn.exec("UPDATE squad SET name = $1 WHERE id=$2",[params[:name]], [id])
+    redirect '/squads'
+  end
+  
+
